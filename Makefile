@@ -1,2 +1,12 @@
-main: main.c
-	gcc main.c -o main -Wall -lm
+cc = gcc
+cflags = -g -Wall -lm
+objects = main.o mandelbrot.o color.o
+
+main: $(objects)
+	$(cc) $(cflags) -o main $^
+
+%.o: %.c
+	$(cc) $(cflags) -c $^
+
+clean:
+	rm -f *.o main
