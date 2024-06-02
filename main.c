@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include <math.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <math.h>
+#include <getopt.h>
+#include <errno.h>
 
 #include "color.h"
 
@@ -12,7 +16,7 @@ float scale = 0;
 float center_y = 0;
 float center_x = 0;
 
-int max_iters = 512;
+int max_iters = 1024;
 int bailout2 = 1<<16; // bailout radius squared
 int box_size = 1024;
 int min_box_size = 4;
@@ -113,12 +117,96 @@ void calc_box(int y1, int x1, int y2, int x2) {
     }
 }
 
-int main() {
-    height = 2049;
-    width = 2049;
-    center_y = 0;
-    center_x = -0.55;
-    scale = 0.001;
+void print_help() {
+    printf("  -?, --help            shows this help text\n");
+    printf("\n");
+    printf("required:\n");
+    printf("  -w, --width=NUMBER    width of the generated image\n");
+    printf("  -h, --height=NUMBER   height of the generated image\n");
+    printf("  -x=FLOAT              the x coordinate(real part) of the center\n");
+    printf("  -y=FLOAT              the y coordinate(imaginary part) of the center\n");
+    printf("  -s, --scale=FLOAT     width and height of a single pixel\n");
+    printf("  -f, --filename=STRING filename to which the generated image will be saved\n");
+}
+
+int main(int argc, char **argv) {
+    char *filename;
+
+    bool width_set = false;
+    bool height_set = false;
+    bool center_x_set = false;
+    bool center_y_set = false;
+    bool scale_set = false;
+    bool filename_set = false;
+
+    struct option long_options[] = {
+        {"help",    no_argument,        NULL,   '?' },
+        {"width",   required_argument,  NULL,   'w' },
+        {"height",  required_argument,  NULL,   'h' },
+        {"scale",   required_argument,  NULL,   's' },
+        {"filename",required_argument,  NULL,   'f' },
+        {NULL,      0,                  NULL,   0   }
+    };
+
+    bool parsing_error = false;
+    int opt;
+    while ((opt = getopt_long(argc, argv, "w:h:x:y:s:f:?", long_options, NULL)) != -1) {
+        switch(opt) {
+            char *endptr;
+            case 'w':
+                width = strtol(optarg, &endptr, 10);
+                if (endptr == optarg) { printf("%s is not a number\n", optarg); parsing_error = true; }
+                width_set = true;
+                break;
+            case 'h':
+                height = strtol(optarg, NULL, 10);
+                if (endptr == optarg) { printf("%s is not a number\n", optarg); parsing_error = true; }
+                height_set = true;
+                break;
+            case 'x':
+                center_x = strtof(optarg, NULL);
+                if (endptr == optarg) { printf("%s is not a number\n", optarg); parsing_error = true; }
+                center_x_set = true;
+                break;
+            case 'y':
+                center_y = strtof(optarg, NULL);
+                if (endptr == optarg) { printf("%s is not a number\n", optarg); parsing_error = true; }
+                center_y_set = true;
+                break;
+            case 's':
+                scale = strtof(optarg, NULL);
+                if (endptr == optarg) { printf("%s is not a number\n", optarg); parsing_error = true; }
+                scale_set = true;
+                break;
+            case 'f':
+                filename = optarg;
+                filename_set = true;
+                break;
+            case '?':
+                print_help();
+                exit(1);
+                break;
+        }
+    }
+
+    if (!width_set) { printf("--width missing\n"); parsing_error = true; }
+    if (!height_set) { printf("--height missing\n"); parsing_error = true; }
+    if (!scale_set) { printf("--scale missing\n"); parsing_error = true; }
+    if (!center_x_set) { printf("-x missing\n"); parsing_error = true; }
+    if (!center_y_set) { printf("-y missing\n"); parsing_error = true; }
+    if (!filename_set) { printf("--filename missing\n"); parsing_error = true; }
+    
+    if (parsing_error) {
+        exit(1);
+    }
+
+    printf("width: %d\n", width);
+    printf("height: %d\n", height);
+    printf("x: %f\n", center_x);
+    printf("y: %f\n", center_y);
+    printf("scale: %f\n", scale);
+    printf("filename: %s\n", filename);
+
 //    center_y = 0.63844;
 //    center_x = 0.16125;
 //    scale = .00001;
@@ -144,8 +232,7 @@ int main() {
         }
     }
 
-    FILE *fp;
-    fp = fopen("image.pbm", "w");
+    FILE *fp = fopen(filename, "w");
     draw_frame(fp);
     fclose(fp);
 
