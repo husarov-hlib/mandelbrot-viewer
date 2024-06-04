@@ -41,7 +41,7 @@ float calc_iters(int y, int x) {
     }
     
     if (i != max_iters) {
-        return (float) i - log2f(log2f(zx2+zy2)) + 2.0F;
+        return fmax(0.0, (float) i - log2f(log2f(zx2+zy2)) + 2.0F);
     } else {
         return (float) i;
     }
