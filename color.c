@@ -41,7 +41,8 @@ void iters_to_rgb(float iters, unsigned char *rgb) {
         return;
     }
 
-    float log = log2f(iters) * colormap_size * 0.1;
+    float log = log2f(fmax(0.125, iters)) * colormap_size * 0.1;
+
     int before = (int) floor(log) % colormap_size;
     int after = (int) ceil(log) % colormap_size;
     float frac = log - floor(log);
