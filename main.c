@@ -8,6 +8,8 @@
 
 #include "color.h"
 
+#define EQ_THRESHOLD 0.0001
+
 int height = 0;
 int width = 0;
 
@@ -32,6 +34,9 @@ float calc_iters(int y, int x) {
     assert(x < width);
     assert(iters[y][x] == -1);
 
+    float old_x;
+    float old_y;
+
     float cy = scale * (float) (y - height/2) + center_y;
     float cx = scale * (float) (x - width/2) + center_x;
     float zy = 0;
@@ -41,10 +46,20 @@ float calc_iters(int y, int x) {
 
     int i = 0;
     while ((i < max_iters) && (zx2 + zy2 <= bailout2)) {
+        if (i % 32 == 0) {
+            old_x = zx;
+            old_y = zy;
+        }
+
         zy = 2 * zx * zy + cy;
         zx = zx2 - zy2 + cx;
         zx2 = zx * zx;
         zy2 = zy * zy;
+
+        if (fabs(old_x - zx) < EQ_THRESHOLD && fabs(old_y - zy) < EQ_THRESHOLD) {
+            return max_iters;
+        }
+
         i++;
     }
     
