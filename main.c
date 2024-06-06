@@ -4,6 +4,8 @@
 #include <math.h>
 #include <getopt.h>
 
+#include <assert.h>
+
 #include "color.h"
 
 int height = 0;
@@ -24,6 +26,12 @@ int max(int a, int b) { return (a > b ? a : b); }
 int min(int a, int b) { return (a < b ? a : b); }
 
 float calc_iters(int y, int x) {
+    assert(y >= 0);
+    assert(y < height);
+    assert(x >= 0);
+    assert(x < width);
+    assert(iters[y][x] == -1);
+
     float cy = scale * (float) (y - height/2) + center_y;
     float cx = scale * (float) (x - width/2) + center_x;
     float zy = 0;
@@ -41,6 +49,7 @@ float calc_iters(int y, int x) {
     }
     
     if (i != max_iters) {
+        assert(fmax(0.0, (float) i - log2f(log2f(zx2+zy2)) + 2.0F) <= max_iters);
         return fmax(0.0, (float) i - log2f(log2f(zx2+zy2)) + 2.0F);
     } else {
         return (float) i;
@@ -226,6 +235,12 @@ int main(int argc, char **argv) {
             for (int i = x; i <= end_x; i++) { iters[end_y][i] = calc_iters(end_y,i); }
             for (int i = y; i < end_y; i++) { iters[i][end_x] = calc_iters(i,end_x); }
             calc_box(y, x, end_y, end_x);
+        }
+    }
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            assert(iters[y][x] >= 0.0);
         }
     }
 
