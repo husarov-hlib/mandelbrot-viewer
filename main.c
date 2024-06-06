@@ -232,8 +232,8 @@ int main(int argc, char **argv) {
         for (int x = 0; x < width-1; x+=box_size) {
             int end_y = min(y+box_size, height-1);
             int end_x = min(x+box_size, width-1);
-            for (int i = x; i <= end_x; i++) { iters[end_y][i] = calc_iters(end_y,i); }
-            for (int i = y; i < end_y; i++) { iters[i][end_x] = calc_iters(i,end_x); }
+            for (int i = x+1; i <= end_x; i++) { iters[end_y][i] = calc_iters(end_y,i); }
+            for (int i = y+1; i < end_y; i++) { iters[i][end_x] = calc_iters(i,end_x); }
             calc_box(y, x, end_y, end_x);
         }
     }
