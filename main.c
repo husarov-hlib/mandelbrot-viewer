@@ -230,6 +230,7 @@ int main(int argc, char **argv) {
     }
 
     FILE *fp = fopen(filename, "w");
+    gen_colormap();
     draw_frame(fp);
     fclose(fp);
 

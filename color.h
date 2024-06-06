@@ -1,6 +1,9 @@
 #ifndef COLOR_H
 #define COLOR_H
 
-void iters_to_rgb(float iters, unsigned char *rgb);
+typedef unsigned char rgb[3];
+
+void iters_to_rgb(float iters, rgb color);
+void gen_colormap();
 
 #endif
