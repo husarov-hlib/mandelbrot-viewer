@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <getopt.h>
-
 #include <assert.h>
 
 #include "color.h"
@@ -220,21 +219,10 @@ void parse_arguments(int argc, char **argv) {
     if (parsing_error) {
         exit(1);
     }
-
-    //printf("width: %d\n", width);
-    //printf("height: %d\n", height);
-    //printf("x: %f\n", center_x);
-    //printf("y: %f\n", center_y);
-    //printf("scale: %f\n", scale);
-    //printf("filename: %s\n", filename);
 }
 
 int main(int argc, char **argv) {
     parse_arguments(argc, argv);
-
-//    center_y = 0.63844;
-//    center_x = 0.16125;
-//    scale = .00001;
 
     iters = (float **) malloc(sizeof(float *) * height);
     for (int y = 0; y < height; y++) {
