@@ -73,18 +73,6 @@ float calc_iters(int y, int x) {
     }
 }
 
-void draw_frame(FILE *fp) {
-    fprintf(fp, "P6\n%d %d 255\n", width, height);
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            float i = iters[y][x];
-            unsigned char rgb[3] = {0,0,0};
-            iters_to_rgb(i, rgb);
-            fwrite(rgb, sizeof(unsigned char), 3, fp);
-        }
-    }
-}
-
 void calc_box(int y1, int x1, int y2, int x2) {
     bool borders_in = true;
 
@@ -136,6 +124,18 @@ void calc_box(int y1, int x1, int y2, int x2) {
                 calc_box(y1, x1, hy, x2);
                 calc_box(hy, x1, y2, x2);
             }
+        }
+    }
+}
+
+void draw_frame(FILE *fp) {
+    fprintf(fp, "P6\n%d %d 255\n", width, height);
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            float i = iters[y][x];
+            unsigned char rgb[3] = {0,0,0};
+            iters_to_rgb(i, rgb);
+            fwrite(rgb, sizeof(unsigned char), 3, fp);
         }
     }
 }
