@@ -22,6 +22,8 @@ int bailout2 = 1<<16; // bailout radius squared
 int box_size = 1024;
 int min_box_size = 4;
 
+char *filename;
+
 float **iters = NULL;
 
 int max(int a, int b) { return (a > b ? a : b); }
@@ -150,9 +152,7 @@ void print_help() {
     printf("  -f, --filename=STRING filename to which the generated image will be saved\n");
 }
 
-int main(int argc, char **argv) {
-    char *filename;
-
+void parse_arguments(int argc, char **argv) {
     bool width_set = false;
     bool height_set = false;
     bool center_x_set = false;
@@ -221,12 +221,16 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    printf("width: %d\n", width);
-    printf("height: %d\n", height);
-    printf("x: %f\n", center_x);
-    printf("y: %f\n", center_y);
-    printf("scale: %f\n", scale);
-    printf("filename: %s\n", filename);
+    //printf("width: %d\n", width);
+    //printf("height: %d\n", height);
+    //printf("x: %f\n", center_x);
+    //printf("y: %f\n", center_y);
+    //printf("scale: %f\n", scale);
+    //printf("filename: %s\n", filename);
+}
+
+int main(int argc, char **argv) {
+    parse_arguments(argc, argv);
 
 //    center_y = 0.63844;
 //    center_x = 0.16125;
