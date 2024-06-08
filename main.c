@@ -4,7 +4,6 @@
 #include <math.h>
 #include <getopt.h>
 #include <assert.h>
-#include <string.h>
 
 #include "color.h"
 
@@ -200,7 +199,7 @@ int main(int argc, char **argv) {
     queue_tail = queue;
     needed = malloc(sizeof(bool) * width*height); // pixels that need to be calculated, i.e.
                                                   // not yet calculated or queued
-    memset(needed, 1, sizeof(bool) * width*height);
+    for (int i = 0; i < width*height; i++) needed[i] = true;
 
     for (int y = 0; y < height; y++) { queue_add(y*width); queue_add((y+1)*width - 1); }
     for (int x = 1; x < width-1; x++) { queue_add(x); queue_add(width*(height-1) + x); }
