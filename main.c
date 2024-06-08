@@ -18,9 +18,9 @@ bool *touched; // pixels queued or already calculated
 int height = 0;
 int width = 0;
 
-float scale = 0; // size, i.e. width or height of pixel
-float center_y = 0;
-float center_x = 0;
+double scale = 0; // size, i.e. width or height of pixel
+double center_y = 0;
+double center_x = 0;
 
 void calc_iters(int index) {
     assert(index >= 0);
@@ -29,15 +29,15 @@ void calc_iters(int index) {
     int x = index % width;
     int y = index / width;
 
-    float cy = scale * (float) (y - height/2) + center_y;
-    float cx = scale * (float) (x - width/2) + center_x;
-    float zy = 0;
-    float zx = 0;
-    float zx2 = 0;
-    float zy2 = 0;
+    double cy = scale * (double) (y - height/2) + center_y;
+    double cx = scale * (double) (x - width/2) + center_x;
+    double zy = 0;
+    double zx = 0;
+    double zx2 = 0;
+    double zy2 = 0;
 
-    float old_x;
-    float old_y;
+    double old_x;
+    double old_y;
 
     int i = 0;
     while ((i < max_iters) && (zx2 + zy2 <= bailout2)) {
@@ -59,8 +59,8 @@ void calc_iters(int index) {
     }
     
     if (i != max_iters) {
-        assert(fmax(0.0, (float) i - log2f(log2f(zx2+zy2)) + 2.0F) <= max_iters);
-        iters[index] = fmax(0.0, (float) i - log2f(log2f(zx2+zy2)) + 2.0F);
+        assert(fmax(0.0, (double) i - log2f(log2f(zx2+zy2)) + 2.0F) <= max_iters);
+        iters[index] = fmax(0.0, (double) i - log2f(log2f(zx2+zy2)) + 2.0F);
     } else {
         iters[index] = i;
     }
