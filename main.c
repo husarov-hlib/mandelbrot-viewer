@@ -24,7 +24,7 @@ int min_box_size = 4;
 
 char *filename;
 
-float **iters = NULL;
+float *iters;
 
 int *queue;
 int *queue_tail;
@@ -33,12 +33,13 @@ bool *needed;
 int max(int a, int b) { return (a > b ? a : b); }
 int min(int a, int b) { return (a < b ? a : b); }
 
-float calc_iters(int y, int x) {
-    assert(y >= 0);
-    assert(y < height);
-    assert(x >= 0);
-    assert(x < width);
+float calc_iters(int i) {
+    assert(i >= 0);
+    assert(i < width*height);
     //assert(iters[y][x] == -1);
+
+    int x = i % width;
+    int y = i / width;
 
     float old_x;
     float old_y;
@@ -50,9 +51,9 @@ float calc_iters(int y, int x) {
     float zx2 = 0;
     float zy2 = 0;
 
-    int i = 0;
-    while ((i < max_iters) && (zx2 + zy2 <= bailout2)) {
-        if (i % 32 == 0) {
+    int iters = 0;
+    while ((iters < max_iters) && (zx2 + zy2 <= bailout2)) {
+        if (iters % 32 == 0) {
             old_x = zx;
             old_y = zy;
         }
@@ -66,26 +67,23 @@ float calc_iters(int y, int x) {
             return max_iters;
         }
 
-        i++;
+        iters++;
     }
     
-    if (i != max_iters) {
-        assert(fmax(0.0, (float) i - log2f(log2f(zx2+zy2)) + 2.0F) <= max_iters);
-        return fmax(0.0, (float) i - log2f(log2f(zx2+zy2)) + 2.0F);
+    if (iters != max_iters) {
+        assert(fmax(0.0, (float) iters - log2f(log2f(zx2+zy2)) + 2.0F) <= max_iters);
+        return fmax(0.0, (float) iters - log2f(log2f(zx2+zy2)) + 2.0F);
     } else {
-        return (float) i;
+        return (float) iters;
     }
 }
 
 void draw_frame(FILE *fp) {
     fprintf(fp, "P6\n%d %d 255\n", width, height);
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            float i = iters[y][x];
-            unsigned char rgb[3] = {0,0,0};
-            iters_to_rgb(i, rgb);
-            fwrite(rgb, sizeof(unsigned char), 3, fp);
-        }
+    for (int i = 0; i < width*height; i++) {
+        unsigned char rgb[3];
+        iters_to_rgb(iters[i], rgb);
+        fwrite(rgb, sizeof(unsigned char), 3, fp);
     }
 }
 
@@ -181,9 +179,9 @@ void queue_add(int i) {
 void scan(int i) {
     int x = i % width;
     int y = i / width;
-    iters[y][x] = calc_iters(y,x);
+    iters[i] = calc_iters(i);
 
-    if (iters[y][x] == max_iters) return;
+    if (iters[i] == max_iters) return;
 
     if (y >= 1)         queue_add(i-width);
     if (x >= 1)         queue_add(i-1);
@@ -194,13 +192,8 @@ void scan(int i) {
 int main(int argc, char **argv) {
     parse_arguments(argc, argv);
 
-    iters = (float **) malloc(sizeof(float *) * height);
-    for (int y = 0; y < height; y++) {
-        iters[y] = (float *) malloc(sizeof(float) * width);
-        for (int x = 0; x < width; x++) {
-            iters[y][x] = max_iters;
-        }
-    }
+    iters = malloc(sizeof(float) * width*height);
+    for (int i = 0; i < width*height; i++) iters[i] = max_iters;
 
     queue = malloc(sizeof(int) * width*height);
     int *queue_head = queue;
