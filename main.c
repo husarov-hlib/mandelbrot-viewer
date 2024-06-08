@@ -4,6 +4,7 @@
 #include <math.h>
 #include <getopt.h>
 #include <assert.h>
+#include <string.h>
 
 #include "color.h"
 
@@ -25,6 +26,10 @@ char *filename;
 
 float **iters = NULL;
 
+int *queue;
+int *queue_tail;
+bool *needed;
+
 int max(int a, int b) { return (a > b ? a : b); }
 int min(int a, int b) { return (a < b ? a : b); }
 
@@ -33,7 +38,7 @@ float calc_iters(int y, int x) {
     assert(y < height);
     assert(x >= 0);
     assert(x < width);
-    assert(iters[y][x] == -1);
+    //assert(iters[y][x] == -1);
 
     float old_x;
     float old_y;
@@ -69,61 +74,6 @@ float calc_iters(int y, int x) {
         return fmax(0.0, (float) i - log2f(log2f(zx2+zy2)) + 2.0F);
     } else {
         return (float) i;
-    }
-}
-
-void calc_box(int y1, int x1, int y2, int x2) {
-    bool borders_in = true;
-
-    for (int y = y1; borders_in && (y < y2); y++) {
-        int x = x1;
-        borders_in &= iters[y][x] == max_iters;
-    }
-    for (int x = x1; borders_in && (x < x2); x++) {
-        int y = y2;
-        borders_in &= iters[y][x] == max_iters;
-    }
-    for (int y = y2; borders_in && (y > y1); y--) {
-        int x = x2;
-        borders_in &= iters[y][x] == max_iters;
-    }
-    for (int x = x2; borders_in && (x > x1); x--) {
-        int y = y1;
-        borders_in &= iters[y][x] == max_iters;
-    }
-
-    if (borders_in) {
-        for (int y = y1+1; y < y2; y++) {
-            for (int x = x1+1; x < x2; x++) {
-                iters[y][x] = max_iters;
-            }
-        }
-    } else {
-        int w = x2-x1;
-        int h = y2-y1;
-        if (max(h,w) < 2*min_box_size) {
-            for (int y = y1+1; y < y2; y++) {
-                for (int x = x1+1; x < x2; x++) {
-                    iters[y][x] = calc_iters(y,x);
-                }
-            }
-        } else {
-            if (w > h) {
-                int hx = (x1+x2)/2;
-                for (int y = y1+1; y < y2; y++) {
-                    iters[y][hx] = calc_iters(y,hx);
-                }
-                calc_box(y1, x1, y2, hx);
-                calc_box(y1, hx, y2, x2);
-            } else {
-                int hy = (y1+y2)/2;
-                for (int x = x1+1; x < x2; x++) {
-                    iters[hy][x] = calc_iters(hy,x);
-                }
-                calc_box(y1, x1, hy, x2);
-                calc_box(hy, x1, y2, x2);
-            }
-        }
     }
 }
 
@@ -221,6 +171,26 @@ void parse_arguments(int argc, char **argv) {
     }
 }
 
+void queue_add(int i) {
+    if (!needed[i]) return;
+    assert(queue_tail < queue + width*height);
+    *(queue_tail++) = i;
+    needed[i] = false;
+}
+
+void scan(int i) {
+    int x = i % width;
+    int y = i / width;
+    iters[y][x] = calc_iters(y,x);
+
+    if (iters[y][x] == max_iters) return;
+
+    if (y >= 1)         queue_add(i-width);
+    if (x >= 1)         queue_add(i-1);
+    if (x < width-1)    queue_add(i+1);
+    if (y < height-1)   queue_add(i+width);
+}
+
 int main(int argc, char **argv) {
     parse_arguments(argc, argv);
 
@@ -228,27 +198,23 @@ int main(int argc, char **argv) {
     for (int y = 0; y < height; y++) {
         iters[y] = (float *) malloc(sizeof(float) * width);
         for (int x = 0; x < width; x++) {
-            iters[y][x] = -1.0;
+            iters[y][x] = max_iters;
         }
     }
 
-    for (int y = 0; y < height; y++) { iters[y][0] = calc_iters(y,0); } // calculating left border
-    for (int x = 1; x < width; x++) { iters[0][x] = calc_iters(0,x); } // calculating top border
-    
-    for (int y = 0; y < height-1; y+=box_size) {
-        for (int x = 0; x < width-1; x+=box_size) {
-            int end_y = min(y+box_size, height-1);
-            int end_x = min(x+box_size, width-1);
-            for (int i = x+1; i <= end_x; i++) { iters[end_y][i] = calc_iters(end_y,i); }
-            for (int i = y+1; i < end_y; i++) { iters[i][end_x] = calc_iters(i,end_x); }
-            calc_box(y, x, end_y, end_x);
-        }
-    }
+    queue = malloc(sizeof(int) * width*height);
+    int *queue_head = queue;
+    queue_tail = queue;
+    needed = malloc(sizeof(bool) * width*height); // pixels that need to be calculated, i.e.
+                                                  // not yet calculated or queued
+    memset(needed, 1, sizeof(bool) * width*height);
 
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            assert(iters[y][x] >= 0.0);
-        }
+    for (int y = 0; y < height; y++) { queue_add(y*width); queue_add((y+1)*width - 1); }
+    for (int x = 1; x < width-1; x++) { queue_add(x); queue_add(width*(height-1) + x); }
+
+    while (queue_head <= queue_tail) {
+        assert(queue_head < queue + width*height);
+        scan(*(queue_head++));
     }
 
     FILE *fp = fopen(filename, "w");
