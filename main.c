@@ -51,10 +51,9 @@ void calc_iters(int index) {
         zx2 = zx * zx;
         zy2 = zy * zy;
 
-        if (fabs(old_x - zx) < EQ_THRESHOLD && fabs(old_y - zy) < EQ_THRESHOLD) {
-            iters[i] = max_iters;
+        if (fabs(old_x - zx) < EQ_THRESHOLD && fabs(old_y - zy) < EQ_THRESHOLD)
             return;
-        }
+
         i++;
     }
     
