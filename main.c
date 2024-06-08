@@ -65,13 +65,15 @@ void calc_iters(int index) {
     }
 }
 
-void draw_frame(FILE *fp) {
+void draw_frame(char *filename) {
+    FILE *fp = fopen(filename, "w");
     fprintf(fp, "P6\n%d %d 255\n", width, height);
     for (int i = 0; i < width*height; i++) {
         unsigned char rgb[3];
         iters_to_rgb(iters[i], rgb);
         fwrite(rgb, sizeof(unsigned char), 3, fp);
     }
+    fclose(fp);
 }
 
 void print_help() {
@@ -202,14 +204,11 @@ int main(int argc, char **argv) {
         queue_add(width*(height-1) + x, &queue_tail);
     }
 
-    while (queue_head <= queue_tail) {
-        scan(*(queue_head++), &queue_tail);
-    }
+    while (queue_head <= queue_tail) { scan(*(queue_head++), &queue_tail); }
 
-    FILE *fp = fopen(filename, "w");
     gen_colormap();
-    draw_frame(fp);
-    fclose(fp);
+
+    draw_frame(filename);
 
     return 0;
 }
