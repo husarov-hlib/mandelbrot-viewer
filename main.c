@@ -9,39 +9,25 @@
 
 #define EQ_THRESHOLD 0.0001
 
+int max_iters = 1024;
+int bailout2 = 1<<16; // bailout radius squared
+
+float *iters;
+bool *touched; // pixels queued or already calculated
+
 int height = 0;
 int width = 0;
 
-float scale = 0;
+float scale = 0; // size, i.e. width or height of pixel
 float center_y = 0;
 float center_x = 0;
 
-int max_iters = 1024;
-int bailout2 = 1<<16; // bailout radius squared
-int box_size = 1024;
-int min_box_size = 4;
+void calc_iters(int index) {
+    assert(index >= 0);
+    assert(index < width*height);
 
-char *filename;
-
-float *iters;
-
-int *queue;
-int *queue_tail;
-bool *needed;
-
-int max(int a, int b) { return (a > b ? a : b); }
-int min(int a, int b) { return (a < b ? a : b); }
-
-float calc_iters(int i) {
-    assert(i >= 0);
-    assert(i < width*height);
-    //assert(iters[y][x] == -1);
-
-    int x = i % width;
-    int y = i / width;
-
-    float old_x;
-    float old_y;
+    int x = index % width;
+    int y = index / width;
 
     float cy = scale * (float) (y - height/2) + center_y;
     float cx = scale * (float) (x - width/2) + center_x;
@@ -50,9 +36,12 @@ float calc_iters(int i) {
     float zx2 = 0;
     float zy2 = 0;
 
-    int iters = 0;
-    while ((iters < max_iters) && (zx2 + zy2 <= bailout2)) {
-        if (iters % 32 == 0) {
+    float old_x;
+    float old_y;
+
+    int i = 0;
+    while ((i < max_iters) && (zx2 + zy2 <= bailout2)) {
+        if (i % 32 == 0) {
             old_x = zx;
             old_y = zy;
         }
@@ -63,17 +52,17 @@ float calc_iters(int i) {
         zy2 = zy * zy;
 
         if (fabs(old_x - zx) < EQ_THRESHOLD && fabs(old_y - zy) < EQ_THRESHOLD) {
-            return max_iters;
+            iters[i] = max_iters;
+            return;
         }
-
-        iters++;
+        i++;
     }
     
-    if (iters != max_iters) {
-        assert(fmax(0.0, (float) iters - log2f(log2f(zx2+zy2)) + 2.0F) <= max_iters);
-        return fmax(0.0, (float) iters - log2f(log2f(zx2+zy2)) + 2.0F);
+    if (i != max_iters) {
+        assert(fmax(0.0, (float) i - log2f(log2f(zx2+zy2)) + 2.0F) <= max_iters);
+        iters[index] = fmax(0.0, (float) i - log2f(log2f(zx2+zy2)) + 2.0F);
     } else {
-        return (float) iters;
+        iters[index] = i;
     }
 }
 
@@ -98,7 +87,7 @@ void print_help() {
     printf("  -f, --filename=STRING filename to which the generated image will be saved\n");
 }
 
-void parse_arguments(int argc, char **argv) {
+void parse_arguments(int argc, char **argv, char **filename) {
     bool width_set = false;
     bool height_set = false;
     bool center_x_set = false;
@@ -146,7 +135,7 @@ void parse_arguments(int argc, char **argv) {
                 scale_set = true;
                 break;
             case 'f':
-                filename = optarg;
+                *filename = optarg;
                 filename_set = true;
                 break;
             case '?':
@@ -164,49 +153,58 @@ void parse_arguments(int argc, char **argv) {
     if (!filename_set) { printf("--filename missing\n"); parsing_error = true; }
     
     if (parsing_error) {
+        print_help();
         exit(1);
     }
 }
 
-void queue_add(int i) {
-    if (!needed[i]) return;
-    assert(queue_tail < queue + width*height);
-    *(queue_tail++) = i;
-    needed[i] = false;
+void queue_add(int i, int **tail) {
+    // if queued or already calculated don't add to the queue
+    if (touched[i]) return;
+
+    **tail = i;
+    (*tail)++;
+    touched[i] = true;
 }
 
-void scan(int i) {
+void scan(int i, int **queue_tail) {
     int x = i % width;
     int y = i / width;
-    iters[i] = calc_iters(i);
+    calc_iters(i);
 
     if (iters[i] == max_iters) return;
 
-    if (y >= 1)         queue_add(i-width);
-    if (x >= 1)         queue_add(i-1);
-    if (x < width-1)    queue_add(i+1);
-    if (y < height-1)   queue_add(i+width);
+    if (y >= 1)         queue_add(i-width, queue_tail);
+    if (x >= 1)         queue_add(i-1, queue_tail);
+    if (x < width-1)    queue_add(i+1, queue_tail);
+    if (y < height-1)   queue_add(i+width, queue_tail);
 }
 
 int main(int argc, char **argv) {
-    parse_arguments(argc, argv);
+    char *filename;
+    parse_arguments(argc, argv, &filename);
 
     iters = malloc(sizeof(float) * width*height);
     for (int i = 0; i < width*height; i++) iters[i] = max_iters;
 
-    queue = malloc(sizeof(int) * width*height);
-    int *queue_head = queue;
-    queue_tail = queue;
-    needed = malloc(sizeof(bool) * width*height); // pixels that need to be calculated, i.e.
-                                                  // not yet calculated or queued
-    for (int i = 0; i < width*height; i++) needed[i] = true;
+    touched = malloc(sizeof(bool) * width*height);
+    for (int i = 0; i < width*height; i++) touched[i] = false;
 
-    for (int y = 0; y < height; y++) { queue_add(y*width); queue_add((y+1)*width - 1); }
-    for (int x = 1; x < width-1; x++) { queue_add(x); queue_add(width*(height-1) + x); }
+    int *queue_head, *queue_tail;
+    queue_head = queue_tail = malloc(sizeof(int) * width*height);
+
+    // calculating borders
+    for (int y = 0; y < height; y++) {
+        queue_add(y*width, &queue_tail);
+        queue_add((y+1)*width - 1, &queue_tail);
+    }
+    for (int x = 1; x < width-1; x++) {
+        queue_add(x, &queue_tail);
+        queue_add(width*(height-1) + x, &queue_tail);
+    }
 
     while (queue_head <= queue_tail) {
-        assert(queue_head < queue + width*height);
-        scan(*(queue_head++));
+        scan(*(queue_head++), &queue_tail);
     }
 
     FILE *fp = fopen(filename, "w");
