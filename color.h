@@ -3,7 +3,7 @@
 
 typedef unsigned char rgb[3];
 
-void iters_to_rgb(float iters, rgb color);
+unsigned int iters_to_rgb(float iters);
 void gen_colormap();
 
 #endif
